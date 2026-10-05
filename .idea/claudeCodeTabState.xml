@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ClaudeCodeTabState">
+    <option name="tabSessions">
+      <map>
+        <entry key="0">
+          <value>
+            <TabSessionState>
+              <option name="projectPath" value="H:\JetBrains\projects\IDEA_files\pro2023_cloud\ByArchetype\spel-helper" />
+              <option name="provider" value="claude" />
+              <option name="sessionId" value="9424bf02-7246-4f2d-a67d-790895f8b7a9" />
+              <option name="cwd" value="H:\JetBrains\projects\IDEA_files\pro2023_cloud\ByArchetype\spel-helper" />
+              <option name="model" value="claude-sonnet-5[1m]" />
+              <option name="permissionMode" value="default" />
+            </TabSessionState>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>

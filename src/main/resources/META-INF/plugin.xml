@@ -1,0 +1,36 @@
+<!-- Plugin Configuration File: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+	<id>io.github.quiethappiness.spel-helper</id>
+
+	<name>Spel-helper</name>
+
+	<vendor url="https://www.yourcompany.com">YourCompany</vendor>
+
+	<description><![CDATA[
+        为自定义注解里的 SpEL 表达式提供高亮、代码补全与 Ctrl+点击跳转。<br>
+        在 <b>Settings | Other Settings | SpEL Helper</b> 里配置「注解全类名 + 属性名」即可。
+        支持裸写 <code>#user.code</code> 与包装写法 <code>#{user.code}</code> 两种形式。
+    ]]></description>
+
+	<depends>com.intellij.modules.platform</depends>
+	<depends>com.intellij.modules.java</depends>
+	<!-- SpEL 语言由 IDEA Ultimate 自带的 Spring 插件提供 -->
+	<depends>com.intellij.spring</depends>
+
+	<extensions defaultExtensionNs="com.intellij">
+		<!-- 把 SpEL 注入到命中的注解属性里(高亮由 SpEL 语言自带) -->
+		<multiHostInjector implementation="io.github.quiethappiness.spelhelper.inject.SpelAnnotationInjector"/>
+
+		<!-- 注册给 SpEL 语言:光标在注入片段里时,跑的是注入语言自己的贡献者 -->
+		<completion.contributor language="SpEL"
+		                        implementationClass="io.github.quiethappiness.spelhelper.completion.SpelCompletionContributor"/>
+
+		<!-- Ctrl+点击跳转 -->
+		<gotoDeclarationHandler implementation="io.github.quiethappiness.spelhelper.nav.SpelGotoDeclarationHandler"/>
+
+		<applicationService serviceImplementation="io.github.quiethappiness.spelhelper.settings.SpelHelperSettings"/>
+		<applicationConfigurable id="io.github.quiethappiness.spelhelper.settings"
+		                         displayName="SpEL Helper"
+		                         instance="io.github.quiethappiness.spelhelper.settings.SpelHelperConfigurable"/>
+	</extensions>
+</idea-plugin>

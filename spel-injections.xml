@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  这是一份给 IDEA 的 Settings | Editor | Language Injections 导入用的配置。
+
+  用之前请把下面两个 definedInClass 里的包名换成你的真实包名。
+  格式说明:
+    withName("属性名")        —— 注解的那个属性
+    definedInClass("全类名")  —— 注解的全类名(嵌套注解用 外层.内层)
+-->
+<component name="LanguageInjectionConfiguration">
+
+  <injection language="SpEL" injector-id="java">
+    <display-name>SpEL Helper 手工验证</display-name>
+
+    <!-- @WrenchTcIdempotent(spelMark = "#user.code") -->
+    <place><![CDATA[psiMethod().withName("spelMark").withParameters().definedInClass("io.github.quiethappiness.wrench.traffic.control.types.annotations.WrenchTcIdempotent")]]></place>
+
+    <!-- @WrenchTcIdempotent.UniqueIdentifier(fieldPathsOrSpels = {"#{user.code}", "#user.code"}) -->
+    <place><![CDATA[psiMethod().withName("fieldPathsOrSpels").withParameters().definedInClass("io.github.quiethappiness.wrench.traffic.control.types.annotations.WrenchTcIdempotent.UniqueIdentifier")]]></place>
+
+  </injection>
+
+</component>
