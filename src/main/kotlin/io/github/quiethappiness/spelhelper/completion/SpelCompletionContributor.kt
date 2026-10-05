@@ -22,11 +22,15 @@ import io.github.quiethappiness.spelhelper.resolve.SpelResolver
 /**
  * 为自定义注解里的 SpEL 提供补全。
  *
- * 注册给 **SpEL 语言** —— 光标落在注入片段里时,跑的是注入语言自己的贡献者,
- * 挂 `language="JAVA"` 是收不到的。
+ * 注册给 **SpEL 语言**,并且在 plugin.xml 里标了 `order="first"`。
  *
- * 全程只在**注入后的文本**里工作:注入时已经给 `#{...}` 补过 `#`,
- * 所以片段文本本身就是可直接解析的表达式,不必回宿主文件换算偏移。
+ * 原因:光标落在注入片段里时,跑的是注入语言自己的贡献者 —— 而 SpEL 自带的那份
+ * 也挂在同一个片段上,它会按自己那套上下文(外层类 / Spring 容器)给一堆候选,
+ * 结果就是 `#this.` 后面冒出别的注解的属性名、`#` 后面冒出一串 Spring bean。
+ * 所以我们先跑,认出上下文后 `stopHere()` 把它摁掉。
+ *
+ * 全程只在**注入后的文本**里工作:注入时已给 `#{...}` 补过 `#`,
+ * 所以片段文本本身就是可解析的表达式,不必回宿主文件换算偏移。
  */
 class SpelCompletionContributor : CompletionContributor() {
 
@@ -45,23 +49,36 @@ class SpelCompletionContributor : CompletionContributor() {
 		val chain = SpelText.parseBefore(fileText.substring(0, caret))
 		val typed = result.withPrefixMatcher(chain.prefix)
 
+		var contributed = false
 		when (chain.expecting) {
-			SpelText.Expecting.VARIABLE ->
+			SpelText.Expecting.VARIABLE -> {
 				rootVariables(literal).forEach { typed.addElement(it) }
+				contributed = true
+			}
 
-			SpelText.Expecting.BEAN ->
+			SpelText.Expecting.BEAN -> {
 				beanCandidates(chain.prefix, literal.project).forEach { typed.addElement(it) }
+				contributed = true
+			}
 
-			SpelText.Expecting.TYPE ->
+			SpelText.Expecting.TYPE -> {
 				typeCandidates(chain.prefix, literal.project).forEach { typed.addElement(it) }
+				contributed = true
+			}
 
 			SpelText.Expecting.PROPERTY -> {
-				val type = SpelResolver.resolveChain(chain.root, chain.segments, literal) ?: return
-				membersOf(type).forEach { typed.addElement(it) }
+				val type = SpelResolver.resolveChain(chain.root, chain.segments, literal)
+				if (type != null) {
+					membersOf(type).forEach { typed.addElement(it) }
+					contributed = true
+				}
 			}
 
 			SpelText.Expecting.NOTHING -> Unit
 		}
+
+		// 这个上下文归我们管,别让 SpEL 自带的那份再往里塞东西
+		if (contributed) result.stopHere()
 	}
 
 	/** 光标在注入文件里的偏移。 */
@@ -76,29 +93,34 @@ class SpelCompletionContributor : CompletionContributor() {
 		return (positionStart + positionLength).coerceIn(0, fileLength)
 	}
 
-	/** `#` 之后:外层方法参数 + 外层类字段 + #root / #this */
+	/** `#` 之后:外层方法参数 + 外层类 public 字段 + #root / #this */
 	private fun rootVariables(literal: PsiLiteralExpression): List<LookupElementBuilder> {
 		val result = mutableListOf<LookupElementBuilder>()
+		val enclosingClass = PsiTreeUtil.getParentOfType(literal, PsiClass::class.java, false)
 
 		PsiTreeUtil.getParentOfType(literal, PsiMethod::class.java, false)
 			?.parameterList?.parameters
 			?.forEach { parameter ->
 				result += LookupElementBuilder.create(parameter, parameter.name)
 					.withPresentableText("#" + parameter.name)
+					.withIcon(parameter.getIcon(0))
 					.withTypeText(parameter.type.presentableText, true)
 			}
 
-		PsiTreeUtil.getParentOfType(literal, PsiClass::class.java, false)
-			?.allFields
+		enclosingClass?.allFields
 			?.filter { it.hasModifierProperty(PsiModifier.PUBLIC) }
 			?.forEach { field ->
 				result += LookupElementBuilder.create(field, field.name)
 					.withPresentableText("#" + field.name)
+					.withIcon(field.getIcon(0))
 					.withTypeText(field.type.presentableText, true)
 			}
 
+		val classIcon = enclosingClass?.getIcon(0)
 		for (implicit in ROOT_ALIASES) {
-			result += LookupElementBuilder.create(implicit).withPresentableText("#$implicit")
+			var builder = LookupElementBuilder.create(implicit).withPresentableText("#$implicit")
+			if (classIcon != null) builder = builder.withIcon(classIcon)
+			result += builder
 		}
 
 		return result
@@ -110,6 +132,7 @@ class SpelCompletionContributor : CompletionContributor() {
 
 		for (member in SpelResolver.propertiesOf(type)) {
 			var builder = LookupElementBuilder.create(member.declaration, member.name)
+				.withIcon(member.declaration.getIcon(0))
 			member.type?.let { builder = builder.withTypeText(it.presentableText, true) }
 			result += builder
 		}
@@ -118,6 +141,7 @@ class SpelCompletionContributor : CompletionContributor() {
 			// getter 已经以属性名给出,这里不重复
 			if (isGetter(member.name, member.hasParameters)) continue
 			result += LookupElementBuilder.create(member.declaration, member.name)
+				.withIcon(member.declaration.getIcon(0))
 				.withTailText(if (member.hasParameters) "(...)" else "()", true)
 		}
 
@@ -137,10 +161,12 @@ class SpelCompletionContributor : CompletionContributor() {
 		return PsiShortNamesCache.getInstance(project)
 			.getClassesByName(simpleName, GlobalSearchScope.allScope(project))
 			.take(MAX_CANDIDATES)
-			.mapNotNull { it.name }
-			.map { beanName ->
-				LookupElementBuilder.create(beanName.replaceFirstChar { it.lowercaseChar() })
-					.withPresentableText("@" + beanName.replaceFirstChar { it.lowercaseChar() })
+			.mapNotNull { psiClass -> psiClass.name?.let { it to psiClass } }
+			.map { (name, psiClass) ->
+				val beanName = name.replaceFirstChar { it.lowercaseChar() }
+				LookupElementBuilder.create(beanName)
+					.withPresentableText("@$beanName")
+					.withIcon(psiClass.getIcon(0))
 			}
 	}
 
@@ -151,8 +177,8 @@ class SpelCompletionContributor : CompletionContributor() {
 		return PsiShortNamesCache.getInstance(project)
 			.getClassesByName(simpleName, GlobalSearchScope.allScope(project))
 			.take(MAX_CANDIDATES)
-			.mapNotNull { it.qualifiedName }
-			.map { LookupElementBuilder.create(it) }
+			.mapNotNull { psiClass -> psiClass.qualifiedName?.let { it to psiClass } }
+			.map { (fqn, psiClass) -> LookupElementBuilder.create(fqn).withIcon(psiClass.getIcon(0)) }
 	}
 
 	private companion object {

@@ -21,11 +21,16 @@
 		<!-- 把 SpEL 注入到命中的注解属性里(高亮由 SpEL 语言自带) -->
 		<multiHostInjector implementation="io.github.quiethappiness.spelhelper.inject.SpelAnnotationInjector"/>
 
-		<!-- 注册给 SpEL 语言:光标在注入片段里时,跑的是注入语言自己的贡献者 -->
-		<completion.contributor language="SpEL"
+		<!-- 注册给 SpEL 语言,并 order="first":先于 SpEL 自带的补全跑,认出上下文后 stopHere() 把它摁掉。
+		     不这样做的话,列表里会混进 SpEL 按自己上下文猜出的候选(别的注解的属性名、Spring bean 等) -->
+		<completion.contributor language="SpEL" order="first"
 		                        implementationClass="io.github.quiethappiness.spelhelper.completion.SpelCompletionContributor"/>
 
-		<!-- Ctrl+点击跳转 -->
+		<!-- 给 #变量 / 属性 / @bean 一个能解析的引用:消除「未解析」黄线,并让跳转与查找引用变成原生行为 -->
+		<psi.referenceContributor language="SpEL"
+		                          implementation="io.github.quiethappiness.spelhelper.ref.SpelReferenceContributor"/>
+
+		<!-- 兜底的 Ctrl+点击跳转(引用解析生效时不会用到) -->
 		<gotoDeclarationHandler implementation="io.github.quiethappiness.spelhelper.nav.SpelGotoDeclarationHandler"/>
 
 		<applicationService serviceImplementation="io.github.quiethappiness.spelhelper.settings.SpelHelperSettings"/>

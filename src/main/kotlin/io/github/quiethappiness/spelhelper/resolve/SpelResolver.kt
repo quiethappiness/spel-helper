@@ -206,6 +206,15 @@ object SpelResolver {
 		return psiClass.findMethodsByName(name, true).firstOrNull()
 	}
 
+	/** `@beanName` 尽力猜到的那个类本身。 */
+	fun beanDeclaration(name: String, project: Project): PsiElement? {
+		if (name.isEmpty()) return null
+		val simpleName = name.replaceFirstChar { it.uppercaseChar() }
+		return PsiShortNamesCache.getInstance(project)
+			.getClassesByName(simpleName, GlobalSearchScope.allScope(project))
+			.firstOrNull()
+	}
+
 	// ---------- 基础 ----------
 
 	/** PsiType → PsiClass。只有 PsiClassType 才可解析,数组/基本类型返回 null。 */
