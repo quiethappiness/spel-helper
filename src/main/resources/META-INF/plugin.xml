@@ -2,14 +2,17 @@
 <idea-plugin>
 	<id>io.github.quiethappiness.spel-helper</id>
 
-	<name>Spel-helper</name>
+	<name>SpEL Helper</name>
 
-	<vendor url="https://www.yourcompany.com">YourCompany</vendor>
+	<vendor url="https://github.com/quiethappiness/spel-helper">quiethappiness</vendor>
 
-	<description><![CDATA[
+	<description><![CDATA[SpEL Helper adds syntax highlighting, code completion, and Ctrl+click navigation to SpEL expressions inside <b>custom annotations</b>.<br>
+        <br>
         为自定义注解里的 SpEL 表达式提供高亮、代码补全与 Ctrl+点击跳转。<br>
-        在 <b>Settings | Other Settings | SpEL Helper</b> 里配置「注解全类名 + 属性名」即可。
-        支持裸写 <code>#user.code</code> 与包装写法 <code>#{user.code}</code> 两种形式。
+        在 <b>Settings | Other Settings | SpEL Helper</b> 里配置「注解全类名 + 属性名」即可。<br>
+        支持裸写 <code>#user.code</code> 与包装写法 <code>#{user.code}</code> 两种形式。<br>
+        <br>
+        <b>Requirements:</b> IntelliJ IDEA Ultimate 2025.2 or newer. The SpEL language is provided by the bundled Spring plugin, so the plugin cannot run in IntelliJ IDEA Community Edition.
     ]]></description>
 
 	<depends>com.intellij.modules.platform</depends>

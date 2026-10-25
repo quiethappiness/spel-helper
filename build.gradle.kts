@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "io.github.quiethappiness"
-version = "1.1-SNAPSHOT"
+version = "1.0.0"
 
 repositories {
 	mavenCentral()
@@ -23,6 +23,10 @@ dependencies {
 		
 		// Java PSI：PsiLiteralExpression、PsiAnnotation、PsiNameValuePair 等
 		bundledPlugin("com.intellij.java")
+
+		// SpEL 语言由 Ultimate 自带的 Spring 插件提供，
+		// plugin.xml 里的 <depends>com.intellij.spring</depends> 必须在这里也声明，否则 verifyPluginProjectConfiguration 会报错
+		bundledPlugin("com.intellij.spring")
 	}
 
 	// SpelText 是纯文本解析，不需要 IDE 环境，用普通 JUnit 4 单测即可
@@ -36,7 +40,15 @@ intellijPlatform {
 		}
 		
 		changeNotes = """
-            Initial version
+            <b>1.0.0</b>
+            <ul>
+              <li>为自定义注解中的 SpEL 表达式提供语法高亮</li>
+              <li><code>#</code> 变量补全：方法参数、外层类字段、#root / #this</li>
+              <li>属性与方法补全：<code>#user.</code> 之后列出目标类的成员</li>
+              <li>Ctrl+点击跳转，并支持查找引用与重命名</li>
+              <li>支持 <code>T(...)</code> 类型引用补全</li>
+              <li>支持裸写 <code>#user.code</code> 与包装写法 <code>#{user.code}</code></li>
+            </ul>
         """.trimIndent()
 	}
 }
